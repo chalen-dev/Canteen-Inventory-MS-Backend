@@ -13,4 +13,9 @@ class InventoryLog extends Model
         'expiry_date',
         'description'
     ];
+
+    public function menuItem()
+    {
+        return $this->belongsTo(MenuItem::class);
+    }
 }
