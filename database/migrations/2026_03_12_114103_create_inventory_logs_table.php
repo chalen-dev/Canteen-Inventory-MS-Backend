@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('inventory_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('item_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('item_id')->constrained('menu_items')->cascadeOnDelete();
             $table->decimal('quantity_in_stock', 10, 2);
             $table->date('date_acquired');
             $table->date('expiry_date');
