@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -17,17 +18,21 @@ class UserSeeder extends Seeder
             [
                 'name' => 'admin',
                 'email' => 'admin@gmail.com',
-                'password' => '$2y$12$04DGXKypl1wYOY5wZvNelOV1UrwS7ohEiLSlZ/T5a.lIodew0roxq'
+                'password' => '$2y$12$04DGXKypl1wYOY5wZvNelOV1UrwS7ohEiLSlZ/T5a.lIodew0roxq',
+                'role' => UserRole::ADMIN->value,
+
             ],
             [
                 'name' => 'cashier',
                 'email' => 'cashier@gmail.com',
-                'password' => '$2y$12$gQ9EHcdWuuq89hY8XwE05ePIckaFPzn/W4VAWGpm3CG39CTJnh9Bu'
+                'password' => '$2y$12$gQ9EHcdWuuq89hY8XwE05ePIckaFPzn/W4VAWGpm3CG39CTJnh9Bu',
+                'role' => UserRole::CASHIER->value,
             ],
             [
                 'name' => 'customer',
                 'email' => 'customer@gmail.com',
-                'password' => '$2y$12$sV9XQdqSqsjYVirD64MUFu7tP3wtPAG5qyhjE7TBcQA2lCO4EkhRW'
+                'password' => '$2y$12$sV9XQdqSqsjYVirD64MUFu7tP3wtPAG5qyhjE7TBcQA2lCO4EkhRW',
+                'role' => UserRole::CUSTOMER->value,
             ]
         ];
         foreach ($users as $user)

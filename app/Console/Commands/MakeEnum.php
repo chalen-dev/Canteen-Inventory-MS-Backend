@@ -38,15 +38,15 @@ class MakeEnum extends Command
     protected function getStub(): string
     {
         return <<<PHP
-<?php
+        <?php
 
-namespace App\Enums;
+        namespace App\Enums;
 
-enum {{ class }}
-{
-    case DRAFT;
-    case PUBLISHED;
-}
-PHP;
+        enum {{ class }}
+        {
+            case DRAFT;
+            case PUBLISHED;
+        }
+        PHP;
     }
 }

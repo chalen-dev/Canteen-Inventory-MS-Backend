@@ -12,7 +12,10 @@ class OrderItemController extends Controller
      */
     public function index()
     {
-        //
+        // Eager load all relationships
+        $orderItems = OrderItem::with(['order', 'menuItem', 'user'])->get();
+
+        return response()->json($orderItems);
     }
 
     /**
@@ -28,7 +31,20 @@ class OrderItemController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'order_id'     => 'required|exists:orders,id',
+            'menu_item_id' => 'required|exists:menu_items,id',
+            'user_id'      => 'required|exists:users,id',
+            'quantity'     => 'required|integer|min:1',
+            'amount'       => 'required|numeric|min:0',
+        ]);
+
+        $orderItem = OrderItem::create($validated);
+
+        // Load relationships
+        $orderItem->load(['order', 'menuItem', 'user']);
+
+        return response()->json($orderItem, 201);
     }
 
     /**
@@ -36,7 +52,10 @@ class OrderItemController extends Controller
      */
     public function show(OrderItem $orderItem)
     {
-        //
+        // Load relationships
+        $orderItem->load(['order', 'menuItem', 'user']);
+
+        return response()->json($orderItem);
     }
 
     /**
@@ -52,7 +71,20 @@ class OrderItemController extends Controller
      */
     public function update(Request $request, OrderItem $orderItem)
     {
-        //
+        $validated = $request->validate([
+            'order_id'     => 'sometimes|required|exists:orders,id',
+            'menu_item_id' => 'sometimes|required|exists:menu_items,id',
+            'user_id'      => 'sometimes|required|exists:users,id',
+            'quantity'     => 'sometimes|required|integer|min:1',
+            'amount'       => 'sometimes|required|numeric|min:0',
+        ]);
+
+        $orderItem->update($validated);
+
+        // Refresh and load relationships
+        $orderItem->load(['order', 'menuItem', 'user']);
+
+        return response()->json($orderItem);
     }
 
     /**
@@ -60,6 +92,8 @@ class OrderItemController extends Controller
      */
     public function destroy(OrderItem $orderItem)
     {
-        //
+        $orderItem->delete();
+
+        return response()->json(null, 204);
     }
 }

@@ -12,7 +12,10 @@ class InventoryLogController extends Controller
      */
     public function index()
     {
-        //
+        // Eager load the menu item relationship
+        $inventoryLogs = InventoryLog::with('menuItem')->get();
+
+        return response()->json($inventoryLogs);
     }
 
     /**
@@ -28,7 +31,20 @@ class InventoryLogController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'item_id'           => 'required|exists:menu_items,id',
+            'quantity_in_stock' => 'required|numeric|min:0',
+            'date_acquired'     => 'required|date',
+            'expiry_date'       => 'nullable|date|after_or_equal:date_acquired',
+            'description'       => 'nullable|string',
+        ]);
+
+        $inventoryLog = InventoryLog::create($validated);
+
+        // Load the menu item relationship
+        $inventoryLog->load('menuItem');
+
+        return response()->json($inventoryLog, 201);
     }
 
     /**
@@ -36,7 +52,10 @@ class InventoryLogController extends Controller
      */
     public function show(InventoryLog $inventoryLog)
     {
-        //
+        // Load the menu item relationship
+        $inventoryLog->load('menuItem');
+
+        return response()->json($inventoryLog);
     }
 
     /**
@@ -52,7 +71,20 @@ class InventoryLogController extends Controller
      */
     public function update(Request $request, InventoryLog $inventoryLog)
     {
-        //
+        $validated = $request->validate([
+            'item_id'           => 'sometimes|required|exists:menu_items,id',
+            'quantity_in_stock' => 'sometimes|required|numeric|min:0',
+            'date_acquired'     => 'sometimes|required|date',
+            'expiry_date'       => 'nullable|date|after_or_equal:date_acquired',
+            'description'       => 'nullable|string',
+        ]);
+
+        $inventoryLog->update($validated);
+
+        // Refresh and load the menu item relationship
+        $inventoryLog->load('menuItem');
+
+        return response()->json($inventoryLog);
     }
 
     /**
@@ -60,6 +92,8 @@ class InventoryLogController extends Controller
      */
     public function destroy(InventoryLog $inventoryLog)
     {
-        //
+        $inventoryLog->delete();
+
+        return response()->json(null, 204);
     }
 }

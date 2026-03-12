@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MenuItem;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class MenuItemController extends Controller
 {
@@ -12,7 +13,9 @@ class MenuItemController extends Controller
      */
     public function index()
     {
-        //
+        $menuItems = MenuItem::with('category')->get();
+
+        return response()->json($menuItems);
     }
 
     /**
@@ -28,7 +31,20 @@ class MenuItemController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validated = $request->validate([
+            'name'          => 'required|string|max:255',
+            'code'          => 'nullable|string|max:50|unique:menu_items,code',
+            'price'         => 'required|numeric|min:0',
+            'category_id'   => 'required|exists:categories,id',
+            'description'   => 'nullable|string',
+        ]);
+
+        $menuItem = MenuItem::create($validated);
+
+        // Load the category for the response
+        $menuItem->load('category');
+
+        return response()->json($menuItem, 201);
     }
 
     /**
@@ -36,7 +52,10 @@ class MenuItemController extends Controller
      */
     public function show(MenuItem $menuItem)
     {
-        //
+        // Load the category relationship
+        $menuItem->load('category');
+
+        return response()->json($menuItem);
     }
 
     /**
@@ -52,7 +71,25 @@ class MenuItemController extends Controller
      */
     public function update(Request $request, MenuItem $menuItem)
     {
-        //
+        $validated = $request->validate([
+            'name'          => 'sometimes|required|string|max:255',
+            'code'          => [
+                'nullable',
+                'string',
+                'max:50',
+                Rule::unique('menu_items')->ignore($menuItem->id),
+            ],
+            'price'         => 'sometimes|required|numeric|min:0',
+            'category_id'   => 'sometimes|required|exists:categories,id',
+            'description'   => 'nullable|string',
+        ]);
+
+        $menuItem->update($validated);
+
+        // Refresh and load the category
+        $menuItem->load('category');
+
+        return response()->json($menuItem);
     }
 
     /**
@@ -60,6 +97,8 @@ class MenuItemController extends Controller
      */
     public function destroy(MenuItem $menuItem)
     {
-        //
+        $menuItem->delete();
+
+        return response()->json(null, 204);
     }
 }
