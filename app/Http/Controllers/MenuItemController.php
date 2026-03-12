@@ -101,4 +101,16 @@ class MenuItemController extends Controller
 
         return response()->json(null, 204);
     }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:menu_items,id'
+        ]);
+
+        MenuItem::whereIn('id', $request->ids)->delete();
+
+        return response()->json(['message' => 'Items deleted successfully.']);
+    }
 }

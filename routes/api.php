@@ -31,6 +31,7 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         Route::post('/menu-items', [MenuItemController::class, 'store']);
         Route::match(['put', 'patch'], '/menu-items/{menu_item}', [MenuItemController::class, 'update']);
         Route::delete('/menu-items/{menu_item}', [MenuItemController::class, 'destroy']);
+        Route::post('/menu-items/bulk-delete', [MenuItemController::class, 'bulkDelete']);
 
         //Category
         Route::post('/categories', [CategoryController::class, 'store']);
