@@ -17,6 +17,8 @@ return new class extends Migration
             $table->enum('order_status', OrderStatus::cases());
             $table->decimal('total_amount', 10, 2);
             $table->text('description')->nullable();
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

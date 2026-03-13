@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\InventoryStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,9 +15,11 @@ return new class extends Migration
         Schema::create('inventory_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('item_id')->constrained('menu_items')->cascadeOnDelete();
-            $table->decimal('quantity_in_stock', 10, 2);
+            $table->integer('quantity_in_stock');
             $table->date('date_acquired');
             $table->date('expiry_date');
+            $table->enum('inventory_status', InventoryStatus::cases())->default(InventoryStatus::IN_STOCK);
+            $table->boolean('is_available')->default(true);
             $table->text('description')->nullable();
             $table->timestamps();
         });

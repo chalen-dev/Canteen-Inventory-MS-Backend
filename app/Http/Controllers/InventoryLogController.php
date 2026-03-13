@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InventoryStatus;
 use App\Models\InventoryLog;
 use Illuminate\Http\Request;
 
@@ -37,6 +38,8 @@ class InventoryLogController extends Controller
             'date_acquired'     => 'required|date',
             'expiry_date'       => 'nullable|date|after_or_equal:date_acquired',
             'description'       => 'nullable|string',
+            'inventory_status'  => 'required|enum:'.implode(',', InventoryStatus::cases()),
+            'is_available'      => 'required|boolean',
         ]);
 
         $inventoryLog = InventoryLog::create($validated);
@@ -77,6 +80,8 @@ class InventoryLogController extends Controller
             'date_acquired'     => 'sometimes|required|date',
             'expiry_date'       => 'nullable|date|after_or_equal:date_acquired',
             'description'       => 'nullable|string',
+            'inventory_status'  => 'sometimes|required|enum:'.implode(',', InventoryStatus::cases()),
+            'is_available'      => 'sometimes|required|boolean',
         ]);
 
         $inventoryLog->update($validated);

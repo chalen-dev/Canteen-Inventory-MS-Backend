@@ -11,11 +11,13 @@ class InventoryLog extends Model
         'quantity_in_stock',
         'date_acquired',
         'expiry_date',
+        'is_available',
+        'inventory_status',
         'description'
     ];
 
     public function menuItem()
     {
-        return $this->belongsTo(MenuItem::class);
+        return $this->belongsTo(MenuItem::class, 'item_id');
     }
 }
