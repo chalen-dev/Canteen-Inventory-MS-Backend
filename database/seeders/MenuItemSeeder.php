@@ -52,23 +52,21 @@ class MenuItemSeeder extends Seeder
             ['name' => 'Family Feast', 'category' => 'Combos', 'price' => 220.00, 'code' => 'C003', 'description' => '2 burgers, 1 large fries, 4 chicken wings, and 4 soft drinks'],
             ['name' => 'Veggie Lover\'s Combo', 'category' => 'Combos', 'price' => 100.00, 'code' => 'C004', 'description' => 'Vegetable pasta, garlic bread, and a fresh juice'],
             ['name' => 'Dessert Duo', 'category' => 'Combos', 'price' => 80.00, 'code' => 'C005', 'description' => 'Any two desserts of your choice with 2 coffees or teas'],
+
+            ['name' => 'Pork BBQ with Rice', 'category' => 'Meals', 'price' => 60.00, 'code' => 'M006', 'description' => 'Grilled pork skewers served with garlic rice'],
+            ['name' => 'Chicken Adobo with Rice', 'category' => 'Meals', 'price' => 70.00, 'code' => 'M007', 'description' => 'Tender chicken stewed in soy sauce and vinegar, with rice'],
+            ['name' => 'Tapsilog', 'category' => 'Meals', 'price' => 75.00, 'code' => 'M008', 'description' => 'Beef tapa, garlic fried rice, and fried egg'],
+            ['name' => 'Pancit Canton', 'category' => 'Meals', 'price' => 50.00, 'code' => 'M009', 'description' => 'Stir-fried noodles with vegetables and chicken'],
+            ['name' => 'Siomai with Rice', 'category' => 'Meals', 'price' => 55.00, 'code' => 'M010', 'description' => '4 pieces pork siomai served with rice and dipping sauce'],
+            ['name' => 'Banana Cue', 'category' => 'Snacks', 'price' => 15.00, 'code' => 'S006', 'description' => 'Deep-fried caramelized saba bananas on a stick'],
+            ['name' => 'Turon', 'category' => 'Snacks', 'price' => 15.00, 'code' => 'S007', 'description' => 'Fried banana lumpia with langka, coated with caramel'],
+            ['name' => 'Lumpiang Shanghai', 'category' => 'Snacks', 'price' => 25.00, 'code' => 'S008', 'description' => 'Crispy fried spring rolls with ground pork and vegetables, 4 pcs'],
+            ['name' => 'Buko Juice', 'category' => 'Beverages', 'price' => 20.00, 'code' => 'B006', 'description' => 'Fresh coconut water with tender coconut strips'],
+            ['name' => 'Sago\'t Gulaman', 'category' => 'Beverages', 'price' => 20.00, 'code' => 'B007', 'description' => 'Iced drink with sago pearls and gelatin, brown sugar syrup'],
         ];
 
-        $filteredItems = [];
-        $countPerCategory = [];
-        foreach ($items as $item) {
-            $cat = $item['category'];
-            if (!isset($countPerCategory[$cat])) {
-                $countPerCategory[$cat] = 0;
-            }
-            if ($countPerCategory[$cat] < 4) {
-                $filteredItems[] = $item;
-                $countPerCategory[$cat]++;
-            }
-        }
-
         // Create menu items
-        foreach ($filteredItems as $item) {
+        foreach ($items as $item) {
             $category = $categories[$item['category']] ?? null;
             if (!$category) {
                 continue; // Skip if category not found

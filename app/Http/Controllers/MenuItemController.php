@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MenuItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class MenuItemController extends Controller
@@ -36,8 +37,17 @@ class MenuItemController extends Controller
             'code'          => 'nullable|string|max:50|unique:menu_items,code',
             'price'         => 'required|numeric|min:0',
             'category_id'   => 'required|exists:categories,id',
+            'photo'         => 'nullable|image|mimes:jpeg,png,jpg,gif',
             'description'   => 'nullable|string',
         ]);
+
+        // Handle file upload
+        if ($request->hasFile('photo')) {
+            // Store the file in the 'public' disk under a 'menu_items' directory
+            // The store() method returns the relative path (e.g., 'menu_items/filename.jpg')
+            $path = $request->file('photo')->store('menu_items', 'public');
+            $validated['photo_path'] = $path;
+        }
 
         $menuItem = MenuItem::create($validated);
 
@@ -81,8 +91,20 @@ class MenuItemController extends Controller
             ],
             'price'         => 'sometimes|required|numeric|min:0',
             'category_id'   => 'sometimes|required|exists:categories,id',
+            'photo' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'description'   => 'nullable|string',
         ]);
+
+        if ($request->hasFile('photo')) {
+            // Delete the old photo if it exists
+            if ($menuItem->photo_path) {
+                Storage::disk('public')->delete($menuItem->photo_path);
+            }
+
+            // Store the new photo
+            $path = $request->file('photo')->store('menu_items', 'public');
+            $validated['photo_path'] = $path;
+        }
 
         $menuItem->update($validated);
 
@@ -97,6 +119,10 @@ class MenuItemController extends Controller
      */
     public function destroy(MenuItem $menuItem)
     {
+        if ($menuItem->photo_path) {
+            Storage::disk('public')->delete($menuItem->photo_path);
+        }
+
         $menuItem->delete();
 
         return response()->json(null, 204);
