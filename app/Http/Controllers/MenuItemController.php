@@ -41,17 +41,33 @@ class MenuItemController extends Controller
             'description'   => 'nullable|string',
         ]);
 
-        // Handle file upload
+        // Handle file upload or use default image
         if ($request->hasFile('photo')) {
-            // Store the file in the 'public' disk under a 'menu_items' directory
-            // The store() method returns the relative path (e.g., 'menu_items/filename.jpg')
             $path = $request->file('photo')->store('menu_items', 'public');
             $validated['photo_path'] = $path;
+        } else {
+            // Define default image paths
+            $defaultSource = database_path('seeders/images/default/default_img.png');
+            $defaultDest = 'menu_items/default.png'; // Fixed name for default image
+
+            // Check if default image already exists in public storage
+            if (!Storage::disk('public')->exists($defaultDest)) {
+                // If source exists, copy it
+                if (file_exists($defaultSource)) {
+                    Storage::disk('public')->put($defaultDest, file_get_contents($defaultSource));
+                }
+            }
+
+            // Set the default path if the file now exists (or we assume it does)
+            if (Storage::disk('public')->exists($defaultDest)) {
+                $validated['photo_path'] = $defaultDest;
+            } else {
+                // Fallback: no image
+                $validated['photo_path'] = null;
+            }
         }
 
         $menuItem = MenuItem::create($validated);
-
-        // Load the category for the response
         $menuItem->load('category');
 
         return response()->json($menuItem, 201);
@@ -91,24 +107,39 @@ class MenuItemController extends Controller
             ],
             'price'         => 'sometimes|required|numeric|min:0',
             'category_id'   => 'sometimes|required|exists:categories,id',
-            'photo' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'photo'         => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'description'   => 'nullable|string',
         ]);
 
+        // Handle photo upload
         if ($request->hasFile('photo')) {
-            // Delete the old photo if it exists
-            if ($menuItem->photo_path) {
+            // Delete old photo if exists and it's not the default
+            if ($menuItem->photo_path && $menuItem->photo_path !== 'menu_items/default.png') {
                 Storage::disk('public')->delete($menuItem->photo_path);
             }
-
-            // Store the new photo
+            // Store new photo
             $path = $request->file('photo')->store('menu_items', 'public');
             $validated['photo_path'] = $path;
         }
+        // Handle explicit removal (photo field present and null)
+        elseif ($request->has('photo') && $request->get('photo') === null) {
+            // Delete old photo if it's not the default
+            if ($menuItem->photo_path && $menuItem->photo_path !== 'menu_items/default.png') {
+                Storage::disk('public')->delete($menuItem->photo_path);
+            }
+            // Ensure default image exists in public storage
+            $defaultSource = database_path('seeders/images/default/default_img.png');
+            $defaultDest = 'menu_items/default.png';
+            if (!Storage::disk('public')->exists($defaultDest)) {
+                if (file_exists($defaultSource)) {
+                    Storage::disk('public')->put($defaultDest, file_get_contents($defaultSource));
+                }
+            }
+            // Assign default path (or null if default missing)
+            $validated['photo_path'] = Storage::disk('public')->exists($defaultDest) ? $defaultDest : null;
+        }
 
         $menuItem->update($validated);
-
-        // Refresh and load the category
         $menuItem->load('category');
 
         return response()->json($menuItem);
