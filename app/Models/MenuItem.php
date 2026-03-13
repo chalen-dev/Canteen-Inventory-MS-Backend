@@ -24,4 +24,11 @@ class MenuItem extends Model
     {
         return $this->hasMany(InventoryLog::class);
     }
+
+    protected $appends = ['image_url'];
+
+    public function getImageUrlAttribute()
+    {
+        return $this->photo_path ? asset('storage/' . $this->photo_path) : null;
+    }
 }
