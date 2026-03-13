@@ -38,7 +38,7 @@ class InventoryLogController extends Controller
             'date_acquired'     => 'required|date',
             'expiry_date'       => 'nullable|date|after_or_equal:date_acquired',
             'description'       => 'nullable|string',
-            'inventory_status'  => 'required|enum:'.implode(',', InventoryStatus::cases()),
+            'inventory_status' => 'required|enum:'.implode(',', array_column(InventoryStatus::cases(), 'value')),
             'is_available'      => 'required|boolean',
         ]);
 
@@ -80,7 +80,7 @@ class InventoryLogController extends Controller
             'date_acquired'     => 'sometimes|required|date',
             'expiry_date'       => 'nullable|date|after_or_equal:date_acquired',
             'description'       => 'nullable|string',
-            'inventory_status'  => 'sometimes|required|enum:'.implode(',', InventoryStatus::cases()),
+            'inventory_status' => 'required|enum:'.implode(',', array_column(InventoryStatus::cases(), 'value')),
             'is_available'      => 'sometimes|required|boolean',
         ]);
 
@@ -92,6 +92,52 @@ class InventoryLogController extends Controller
         return response()->json($inventoryLog);
     }
 
+    public function updateQuantity(Request $request, InventoryLog $inventoryLog)
+    {
+        $request->validate([
+            'quantity_in_stock' => 'required|numeric|min:0',
+        ]);
+
+        $inventoryLog->quantity_in_stock = $request->quantity_in_stock;
+        $inventoryLog->save();
+
+        $inventoryLog->load('menuItem');
+
+        return response()->json($inventoryLog);
+    }
+
+    public function toggleAvailability(InventoryLog $inventoryLog, Request $request)
+    {
+        $request->validate([
+            'is_available' => 'required|boolean',
+        ]);
+
+        $inventoryLog->is_available = $request->is_available;
+        $inventoryLog->save();
+
+        // Optionally load relationship
+        $inventoryLog->load('menuItem');
+
+        return response()->json($inventoryLog);
+    }
+
+    public function bulkToggleAvailability(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:inventory_logs,id',
+            'is_available' => 'required|boolean',
+        ]);
+
+        $count = InventoryLog::whereIn('id', $request->ids)
+            ->update(['is_available' => $request->is_available]);
+
+        return response()->json([
+            'message' => "{$count} inventory log(s) updated successfully.",
+            'updated_count' => $count
+        ]);
+    }
+
     /**
      * Remove the specified resource from storage.
      */
@@ -101,4 +147,21 @@ class InventoryLogController extends Controller
 
         return response()->json(null, 204);
     }
+
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:inventory_logs,id',
+        ]);
+
+        $count = InventoryLog::whereIn('id', $request->ids)->delete();
+
+        return response()->json([
+            'message' => "{$count} inventory log(s) deleted successfully.",
+            'deleted_count' => $count
+        ]);
+    }
+
+
 }

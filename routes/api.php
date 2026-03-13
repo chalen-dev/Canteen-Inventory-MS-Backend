@@ -51,6 +51,12 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         Route::match(['put', 'patch'], '/inventory-logs/{inventory_log}', [InventoryLogController::class, 'update']);
         Route::delete('/inventory-logs/{inventory_log}', [InventoryLogController::class, 'destroy']);
         Route::post('/menu-items/{menu_item}/inventory-logs', [InventoryLogController::class, 'store']);
+        Route::post('/inventory-logs/bulk-delete', [InventoryLogController::class, 'bulkDelete']);
+        Route::patch('/inventory-logs/{inventory_log}/quantity', [InventoryLogController::class, 'updateQuantity']);
+
+        //Inventory
+        Route::patch('/inventory-logs/{inventory_log}/toggle-availability', [InventoryLogController::class, 'toggleAvailability']);
+        Route::post('/inventory-logs/bulk-toggle-availability', [InventoryLogController::class, 'bulkToggleAvailability']);
     });
 
     //Cashier Only Routes
@@ -64,7 +70,6 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         //Order
         Route::post('/orders', [OrderController::class, 'store']);
         Route::match(['put', 'patch'], '/orders/{order}', [OrderController::class, 'update']);
-
 
     });
 
