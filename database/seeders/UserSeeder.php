@@ -22,7 +22,7 @@ class UserSeeder extends Seeder
             //POS user (where POS transactions are tied)
             [
                 'name' => 'POS',
-                'email' => 'admin@gmail.com',
+                'email' => 'pos@gmail.com',
                 'password' => '$2y$12$04DGXKypl1wYOY5wZvNelOV1UrwS7ohEiLSlZ/T5a.lIodew0roxq',
                 'role' => UserRole::CUSTOMER->value,
                 'is_POS' => true,
