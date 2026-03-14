@@ -12,6 +12,7 @@ class InventoryLog extends Model
         'date_acquired',
         'expiry_date',
         'is_available',
+        'is_archived',
         'inventory_status',
         'description'
     ];

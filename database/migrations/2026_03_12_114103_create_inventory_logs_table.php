@@ -25,6 +25,8 @@ return new class extends Migration
                 ->default(InventoryStatus::IN_STOCK);
             $table->boolean('is_available')
                 ->default(false);
+            $table->boolean('is_archived')
+                ->default(false);
             $table->text('description')
                 ->nullable();
             $table->timestamps();

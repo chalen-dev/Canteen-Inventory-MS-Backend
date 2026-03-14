@@ -54,6 +54,8 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         Route::post('/inventory-logs/bulk-delete', [InventoryLogController::class, 'bulkDelete']);
         Route::patch('/inventory-logs/{inventory_log}/quantity', [InventoryLogController::class, 'updateQuantity']);
         Route::patch('/inventory-logs/{inventory_log}/toggle-availability', [InventoryLogController::class, 'toggleAvailability']);
+        Route::post('/inventory-logs/bulk-archive', [InventoryLogController::class, 'bulkArchive']);
+        Route::post('/inventory-logs/bulk-unarchive', [InventoryLogController::class, 'bulkUnarchive']);
         Route::post('/inventory-logs/bulk-toggle-availability', [InventoryLogController::class, 'bulkToggleAvailability']);
     });
 

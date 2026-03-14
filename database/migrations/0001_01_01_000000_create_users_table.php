@@ -18,7 +18,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('role', UserRole::cases())->default(UserRole::CUSTOMER->value);;
+            $table->enum('role', UserRole::cases())->default(UserRole::CUSTOMER->value);
+            $table->boolean('isPOS')->default(false);
             $table->rememberToken();
             $table->timestamps();
         });

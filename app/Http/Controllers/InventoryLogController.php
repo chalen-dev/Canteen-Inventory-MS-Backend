@@ -138,6 +138,41 @@ class InventoryLogController extends Controller
         ]);
     }
 
+    public function bulkArchive(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:inventory_logs,id',
+        ]);
+
+        $count = InventoryLog::whereIn('id', $request->ids)
+            ->update([
+                'is_archived' => true,
+                'is_available' => false
+            ]);
+
+        return response()->json([
+            'message' => "{$count} inventory log(s) archived successfully.",
+            'archived_count' => $count
+        ]);
+    }
+
+    public function bulkUnarchive(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:inventory_logs,id',
+        ]);
+
+        $count = InventoryLog::whereIn('id', $request->ids)
+            ->update(['is_archived' => false]);
+
+        return response()->json([
+            'message' => "{$count} inventory log(s) unarchived successfully.",
+            'unarchived_count' => $count
+        ]);
+    }
+
     /**
      * Remove the specified resource from storage.
      */
