@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InventoryLog;
 use App\Models\OrderItem;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
 class OrderItemController extends Controller
@@ -87,10 +89,18 @@ class OrderItemController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(OrderItem $orderItem)
+    public function destroy(InventoryLog $inventoryLog)
     {
-        $orderItem->delete();
-
-        return response()->json(null, 204);
+        try {
+            $inventoryLog->delete();
+            return response()->json(null, 204);
+        } catch (QueryException $e) {
+            if ($e->errorInfo[1] == 1451) {
+                return response()->json([
+                    'message' => 'Cannot delete this inventory log because it is referenced in order items.'
+                ], 409);
+            }
+            throw $e;
+        }
     }
 }

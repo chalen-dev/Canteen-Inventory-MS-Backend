@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\InventoryStatus;
 use App\Models\InventoryLog;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class InventoryLogController extends Controller
 {
@@ -178,24 +180,40 @@ class InventoryLogController extends Controller
      */
     public function destroy(InventoryLog $inventoryLog)
     {
-        $inventoryLog->delete();
-
-        return response()->json(null, 204);
+        try {
+            $inventoryLog->delete();
+            return response()->json(null, 204);
+        } catch (QueryException $e) {
+            if ($e->errorInfo[1] == 1451) {
+                return response()->json([
+                    'message' => 'Cannot delete this inventory log because it is referenced in order items.'
+                ], 409);
+            }
+            throw $e;
+        }
     }
 
     public function bulkDelete(Request $request)
     {
         $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'exists:inventory_logs,id',
+            'ids.*' => 'exists:inventory_logs,id'
         ]);
 
-        $count = InventoryLog::whereIn('id', $request->ids)->delete();
-
-        return response()->json([
-            'message' => "{$count} inventory log(s) deleted successfully.",
-            'deleted_count' => $count
-        ]);
+        DB::beginTransaction();
+        try {
+            InventoryLog::whereIn('id', $request->ids)->delete();
+            DB::commit();
+            return response()->json(['message' => 'Inventory logs deleted successfully.']);
+        } catch (QueryException $e) {
+            DB::rollBack();
+            if ($e->errorInfo[1] == 1451) {
+                return response()->json([
+                    'message' => 'Cannot delete one or more inventory logs because they are referenced in order items.'
+                ], 409);
+            }
+            throw $e;
+        }
     }
 
 

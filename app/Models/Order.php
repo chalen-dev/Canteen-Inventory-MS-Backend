@@ -13,8 +13,6 @@ class Order extends Model
         'description',
     ];
 
-    protected $appends = ['total_amount']; // include in JSON responses
-
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);

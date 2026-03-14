@@ -19,6 +19,14 @@ class UserSeeder extends Seeder
 
         // Base testing users
         $users = [
+            //POS user (where POS transactions are tied)
+            [
+                'name' => 'POS',
+                'email' => 'admin@gmail.com',
+                'password' => '$2y$12$04DGXKypl1wYOY5wZvNelOV1UrwS7ohEiLSlZ/T5a.lIodew0roxq',
+                'role' => UserRole::CUSTOMER->value,
+                'is_pos' => true,
+            ],
             [
                 'name' => 'admin',
                 'email' => 'admin@gmail.com',

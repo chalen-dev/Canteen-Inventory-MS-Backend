@@ -53,6 +53,27 @@ class OrderController extends Controller
     }
 
     /**
+     * Store a new order for a specified customer (admin/cashier only).
+     */
+    public function storeForCustomerByStaff(Request $request)
+    {
+        $validated = $request->validate([
+            'order_status' => 'required|string|in:pending,preparing,ready,completed,cancelled',
+            'description'  => 'nullable|string',
+            'user_id'      => 'required|exists:users,id',
+        ]);
+
+        $order = Order::create([
+            'user_id'      => $validated['user_id'],
+            'order_status' => $validated['order_status'],
+            'description'  => $validated['description'] ?? null,
+        ]);
+
+        $order->load('orderItems');
+        return response()->json($order, 201);
+    }
+
+    /**
      * Display the specified resource.
      */
     public function show(Request $request, Order $order)

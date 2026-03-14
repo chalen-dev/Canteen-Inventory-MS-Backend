@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\MenuItem;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -150,13 +152,21 @@ class MenuItemController extends Controller
      */
     public function destroy(MenuItem $menuItem)
     {
-        if ($menuItem->photo_path) {
-            Storage::disk('public')->delete($menuItem->photo_path);
+        try {
+            if ($menuItem->photo_path) {
+                Storage::disk('public')->delete($menuItem->photo_path);
+            }
+            $menuItem->delete();
+            return response()->json(null, 204);
+        } catch (QueryException $e) {
+            // MySQL error code 1451: Cannot delete or update a parent row: a foreign key constraint fails
+            if ($e->errorInfo[1] == 1451) {
+                return response()->json([
+                    'message' => 'Cannot delete this menu item because it is referenced in inventory logs.'
+                ], 409);
+            }
+            throw $e;
         }
-
-        $menuItem->delete();
-
-        return response()->json(null, 204);
     }
 
     public function bulkDelete(Request $request)
@@ -166,8 +176,19 @@ class MenuItemController extends Controller
             'ids.*' => 'exists:menu_items,id'
         ]);
 
-        MenuItem::whereIn('id', $request->ids)->delete();
-
-        return response()->json(['message' => 'Items deleted successfully.']);
+        DB::beginTransaction();
+        try {
+            MenuItem::whereIn('id', $request->ids)->delete();
+            DB::commit();
+            return response()->json(['message' => 'Items deleted successfully.']);
+        } catch (QueryException $e) {
+            DB::rollBack();
+            if ($e->errorInfo[1] == 1451) {
+                return response()->json([
+                    'message' => 'Cannot delete one or more menu items because they are referenced in inventory logs.'
+                ], 409);
+            }
+            throw $e;
+        }
     }
 }

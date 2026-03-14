@@ -7,6 +7,7 @@ use App\Http\Controllers\InventoryLogController;
 use App\Http\Controllers\MenuItemController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemController;
+use App\Http\Controllers\UserController;
 
 
 $admin = UserRole::ADMIN->value;
@@ -19,10 +20,29 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanc
 Route::get('/user', [AuthController::class, 'user'])->middleware('auth:sanctum');
 
 
-
-
-
 Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $customer) {
+
+    //Admin & Cashier Routes
+    Route::middleware('role:' . $admin . ',' . $cashier)->group(function () {
+
+        //Inventory Log
+        Route::post('/inventory-logs', [InventoryLogController::class, 'store']);
+        Route::match(['put', 'patch'], '/inventory-logs/{inventory_log}', [InventoryLogController::class, 'update']);
+        Route::delete('/inventory-logs/{inventory_log}', [InventoryLogController::class, 'destroy']);
+        Route::post('/menu-items/{menu_item}/inventory-logs', [InventoryLogController::class, 'store']);
+        Route::post('/inventory-logs/bulk-delete', [InventoryLogController::class, 'bulkDelete']);
+        Route::patch('/inventory-logs/{inventory_log}/quantity', [InventoryLogController::class, 'updateQuantity']);
+        Route::patch('/inventory-logs/{inventory_log}/toggle-availability', [InventoryLogController::class, 'toggleAvailability']);
+        Route::post('/inventory-logs/bulk-archive', [InventoryLogController::class, 'bulkArchive']);
+        Route::post('/inventory-logs/bulk-unarchive', [InventoryLogController::class, 'bulkUnarchive']);
+        Route::post('/inventory-logs/bulk-toggle-availability', [InventoryLogController::class, 'bulkToggleAvailability']);
+
+        // Customer list (for order assignment)
+        Route::get('/users/customers', [UserController::class, 'customers']);
+
+        // Store order for a customer (admin/cashier only)
+        Route::post('/orders/for-customer', [OrderController::class, 'storeForCustomerByStaff']);
+    });
 
     //Admin Only Routes
     Route::middleware('role:' . $admin)->group(function () {
@@ -41,23 +61,15 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         //Order
         Route::delete('/orders/{order}', [OrderController::class, 'destroy']);
 
+        // User management
+        Route::get('/users', [UserController::class, 'index']);
+        Route::get('/users/{user}', [UserController::class, 'show']);
+        Route::post('/users', [UserController::class, 'store']);
+        Route::match(['put', 'patch'], '/users/{user}', [UserController::class, 'update']);
+        Route::delete('/users/{user}', [UserController::class, 'destroy']);
     });
 
-    //Admin & Cashier Routes
-    Route::middleware('role:' . $admin . ',' . $cashier)->group(function () {
 
-        //Inventory Log
-        Route::post('/inventory-logs', [InventoryLogController::class, 'store']);
-        Route::match(['put', 'patch'], '/inventory-logs/{inventory_log}', [InventoryLogController::class, 'update']);
-        Route::delete('/inventory-logs/{inventory_log}', [InventoryLogController::class, 'destroy']);
-        Route::post('/menu-items/{menu_item}/inventory-logs', [InventoryLogController::class, 'store']);
-        Route::post('/inventory-logs/bulk-delete', [InventoryLogController::class, 'bulkDelete']);
-        Route::patch('/inventory-logs/{inventory_log}/quantity', [InventoryLogController::class, 'updateQuantity']);
-        Route::patch('/inventory-logs/{inventory_log}/toggle-availability', [InventoryLogController::class, 'toggleAvailability']);
-        Route::post('/inventory-logs/bulk-archive', [InventoryLogController::class, 'bulkArchive']);
-        Route::post('/inventory-logs/bulk-unarchive', [InventoryLogController::class, 'bulkUnarchive']);
-        Route::post('/inventory-logs/bulk-toggle-availability', [InventoryLogController::class, 'bulkToggleAvailability']);
-    });
 
     //Cashier Only Routes
     Route::middleware('role:' . $cashier)->group(function () {
@@ -66,10 +78,6 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
 
     //Cashier and Customer Routes
     Route::middleware('role:' . $cashier . ',' . $customer)->group(function () {
-
-        //Order
-        Route::post('/orders', [OrderController::class, 'store']);
-        Route::match(['put', 'patch'], '/orders/{order}', [OrderController::class, 'update']);
 
     });
 
@@ -89,6 +97,8 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
     //Order
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::match(['put', 'patch'], '/orders/{order}', [OrderController::class, 'update']);
 
     //Inventory Log
     Route::get('/inventory-logs', [InventoryLogController::class, 'index']);
