@@ -10,11 +10,19 @@ class OrderController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Eager load the order items relationship
-        $orders = Order::with('orderItems')->get();
+        $user = $request->user();
+        $query = Order::with([
+            'orderItems.inventoryLog.menuItem.category',
+            'user'
+        ]);
 
+        if ($user->role === 'customer') {
+            $query->where('user_id', $user->id);
+        }
+
+        $orders = $query->get();
         return response()->json($orders);
     }
 
@@ -32,15 +40,14 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'order_status' => 'required|string|in:pending,processing,completed,cancelled',
-            'total_amount' => 'required|numeric|min:0',
+            'order_status' => 'required|string|in:pending,preparing,ready,completed,cancelled',
             'description'  => 'nullable|string',
         ]);
 
-        $order = Order::create($validated);
+        $validated['user_id'] = $request->user()->id;
 
-        // Load the order items (empty initially)
-        $order->load('orderItems');
+        $order = Order::create($validated);
+        $order->load('orderItems'); // load empty collection for consistency
 
         return response()->json($order, 201);
     }
@@ -48,11 +55,17 @@ class OrderController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Order $order)
+    public function show(Request $request, Order $order)
     {
-        // Load the order items relationship
-        $order->load('orderItems');
+        $user = $request->user();
+        if ($user->role === 'customer' && $order->user_id !== $user->id) {
+            abort(403, 'Unauthorized');
+        }
 
+        $order->load([
+            'orderItems.inventoryLog.menuItem.category',
+            'user'
+        ]);
         return response()->json($order);
     }
 
@@ -70,14 +83,11 @@ class OrderController extends Controller
     public function update(Request $request, Order $order)
     {
         $validated = $request->validate([
-            'order_status' => 'sometimes|required|string|in:pending,processing,completed,cancelled',
-            'total_amount' => 'sometimes|required|numeric|min:0',
+            'order_status' => 'sometimes|required|string|in:pending,preparing,ready,completed,cancelled',
             'description'  => 'nullable|string',
         ]);
 
         $order->update($validated);
-
-        // Refresh and load relationships
         $order->load('orderItems');
 
         return response()->json($order);
@@ -89,7 +99,6 @@ class OrderController extends Controller
     public function destroy(Order $order)
     {
         $order->delete();
-
         return response()->json(null, 204);
     }
 }

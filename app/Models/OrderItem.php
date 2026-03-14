@@ -8,8 +8,7 @@ class OrderItem extends Model
 {
     protected $fillable = [
         'order_id',
-        'menu_item_id',
-        'user_id',
+        'inventory_id',
         'quantity',
         'amount'
     ];
@@ -19,8 +18,8 @@ class OrderItem extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function menuItem()
+    public function inventoryLog()
     {
-        return $this->belongsTo(MenuItem::class);
+        return $this->belongsTo(InventoryLog::class, 'inventory_id');
     }
 }

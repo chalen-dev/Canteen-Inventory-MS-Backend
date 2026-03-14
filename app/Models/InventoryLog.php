@@ -20,4 +20,9 @@ class InventoryLog extends Model
     {
         return $this->belongsTo(MenuItem::class, 'item_id');
     }
+
+    public function orderItem()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
 }
