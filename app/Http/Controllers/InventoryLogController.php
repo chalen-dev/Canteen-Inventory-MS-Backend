@@ -13,8 +13,8 @@ class InventoryLogController extends Controller
      */
     public function index()
     {
-        // Eager load the menu item relationship
-        $inventoryLogs = InventoryLog::with('menuItem')->get();
+        // Eager load menu item and its category
+        $inventoryLogs = InventoryLog::with('menuItem.category')->get();
 
         return response()->json($inventoryLogs);
     }
