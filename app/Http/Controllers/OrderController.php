@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -115,11 +117,63 @@ class OrderController extends Controller
     }
 
     /**
+     * Update only the status of an order.
+     */
+    public function updateStatus(Request $request, Order $order)
+    {
+        $user = $request->user();
+
+        // Customers cannot update status
+        if ($user->role === 'customer') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $validated = $request->validate([
+            'order_status' => 'required|string|in:pending,preparing,ready,completed,cancelled',
+        ]);
+
+        $order->update(['order_status' => $validated['order_status']]);
+
+        return response()->json($order->load(['orderItems.inventoryLog.menuItem.category', 'user']));
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Order $order)
     {
         $order->delete();
         return response()->json(null, 204);
+    }
+
+    /**
+     * Delete multiple orders.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:orders,id'
+        ]);
+
+        // Only admin can bulk delete (already in admin group, but double-check)
+        if ($request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            DB::beginTransaction();
+            $count = Order::whereIn('id', $request->ids)->delete();
+            DB::commit();
+            return response()->json(['message' => "$count orders deleted successfully."]);
+        } catch (QueryException $e) {
+            DB::rollBack();
+            if ($e->errorInfo[1] == 1451) {
+                return response()->json([
+                    'message' => 'Cannot delete one or more orders because they have associated order items.'
+                ], 409);
+            }
+            throw $e;
+        }
     }
 }

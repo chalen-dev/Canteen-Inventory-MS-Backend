@@ -33,5 +33,23 @@ class DatabaseSeeder extends Seeder
             OrderSeeder::class,
             OrderItemSeeder::class,
         ]);
+
+        $this->command->info('Credentials for Testing:');
+        $this->command->info('');
+        $this->command->info('Admin');
+        $this->command->info('username: admin');
+        $this->command->info('email: admin@gmail.com');
+        $this->command->info('password: admin');
+        $this->command->info('');
+        $this->command->info('Cashier');
+        $this->command->info('');
+        $this->command->info('username: cashier');
+        $this->command->info('email: cashier@gmail.com');
+        $this->command->info('password: cashier');
+        $this->command->info('');
+        $this->command->info('Customer');
+        $this->command->info('username: customer');
+        $this->command->info('email: customer@gmail.com');
+        $this->command->info('password: customer');
     }
 }

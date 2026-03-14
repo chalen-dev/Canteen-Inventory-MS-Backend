@@ -40,8 +40,11 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         // Customer list (for order assignment)
         Route::get('/users/customers', [UserController::class, 'customers']);
 
+        //Order
         // Store order for a customer (admin/cashier only)
         Route::post('/orders/for-customer', [OrderController::class, 'storeForCustomerByStaff']);
+        Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+        Route::post('/orders/bulk-delete', [OrderController::class, 'bulkDelete']);
     });
 
     //Admin Only Routes
