@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Helpers\ConsoleHyperlink;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -34,22 +35,31 @@ class DatabaseSeeder extends Seeder
             OrderItemSeeder::class,
         ]);
 
-        $this->command->info('Credentials for Testing:');
-        $this->command->info('');
-        $this->command->info('Admin');
-        $this->command->info('username: admin');
-        $this->command->info('email: admin@gmail.com');
-        $this->command->info('password: admin');
-        $this->command->info('');
-        $this->command->info('Cashier');
-        $this->command->info('');
-        $this->command->info('username: cashier');
-        $this->command->info('email: cashier@gmail.com');
-        $this->command->info('password: cashier');
-        $this->command->info('');
-        $this->command->info('Customer');
-        $this->command->info('username: customer');
-        $this->command->info('email: customer@gmail.com');
-        $this->command->info('password: customer');
+        $output = <<<TEXT
+                Credentials for Testing:
+
+                Cashier
+
+                username: cashier
+                email: cashier@gmail.com
+                password: cashier
+
+                Customer
+                username: customer
+                email: customer@gmail.com
+                password: customer
+
+                Admin
+                username: admin
+                email: admin@gmail.com
+                password: admin
+
+                Admin Login Address:
+                TEXT;
+
+        $this->command->line($output);
+        $this->command->line("\033]8;;http://localhost:5173/loginStaff\033\\http://localhost:5173/loginStaff\033]8;;\033\\");
+        $this->command->line(" ");
+        $this->command->line(" ");
     }
 }
