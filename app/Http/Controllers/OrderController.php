@@ -3,13 +3,42 @@
 namespace App\Http\Controllers;
 
 use App\Models\InventoryLog;
+use App\Models\Notification;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
+
+    private function notifyStaff(string $title, string $message, array $data = [])
+    {
+        $staff = User::whereIn('role', ['admin', 'cashier'])->get();
+        foreach ($staff as $user) {
+            Notification::create([
+                'user_id' => $user->id,
+                'type' => $data['type'] ?? 'info',
+                'title' => $title,
+                'message' => $message,
+                'data' => $data,
+            ]);
+        }
+    }
+
+    private function notifyCustomer(Order $order, string $title, string $message, array $data = [])
+    {
+        Notification::create([
+            'user_id' => $order->user_id,
+            'type' => $data['type'] ?? 'info',
+            'title' => $title,
+            'message' => $message,
+            'data' => $data,
+        ]);
+    }
+
+
     /**
      * Display a listing of the resource.
      */
@@ -51,6 +80,12 @@ class OrderController extends Controller
 
         $order = Order::create($validated);
         $order->load('orderItems'); // load empty collection for consistency
+
+        $this->notifyStaff(
+            'New Order',
+            "Order #{$order->id} has been placed.",
+            ['order_id' => $order->id, 'type' => 'new_order']
+        );
 
         return response()->json($order, 201);
     }
@@ -230,15 +265,30 @@ class OrderController extends Controller
             'order_status' => 'required|string|in:pending,preparing,ready,completed,cancelled',
         ]);
 
+        $oldStatus = $order->order_status;
+
         // If changing to cancelled and order wasn't cancelled before, restore stock
-        if ($validated['order_status'] === 'cancelled' && $order->order_status !== 'cancelled') {
+        if ($validated['order_status'] === 'cancelled' && $oldStatus !== 'cancelled') {
             $order->restoreStock();
         }
-        // Optional: if changing from cancelled to another status, you might want to re‑deduct stock,
-        // but that would require checking current inventory levels and is more complex.
-        // For simplicity, you may disallow changing from cancelled.
 
         $order->update(['order_status' => $validated['order_status']]);
+
+        // Notify the customer if the new status is preparing, ready, or cancelled
+        if (in_array($validated['order_status'], ['preparing', 'ready', 'cancelled']) && $oldStatus !== $validated['order_status']) {
+            $message = "Your order #{$order->id} is now {$validated['order_status']}.";
+            if ($validated['order_status'] === 'ready') {
+                $message = "Your order #{$order->id} is ready for pickup. Please claim at the canteen.";
+            }
+
+            Notification::create([
+                'user_id' => $order->user_id,
+                'type' => 'order_status_changed',
+                'title' => 'Order Status Update',
+                'message' => $message,
+                'data' => ['order_id' => $order->id, 'status' => $validated['order_status']],
+            ]);
+        }
 
         return response()->json($order->load(['orderItems.inventoryLog.menuItem.category', 'user']));
     }
@@ -271,5 +321,54 @@ class OrderController extends Controller
             }
             throw $e;
         }
+    }
+
+    public function cancel(Request $request, Order $order)
+    {
+        $user = $request->user();
+
+        // Ensure the order belongs to the authenticated user
+        if ($order->user_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Only allow cancellation if status is pending
+        if ($order->order_status !== 'pending') {
+            return response()->json(['message' => 'Only pending orders can be cancelled'], 400);
+        }
+
+        DB::transaction(function () use ($order) {
+            // Restore stock before cancelling
+            $order->restoreStock();
+            $order->order_status = 'cancelled';
+            $order->save();
+        });
+
+        return response()->json($order->load(['orderItems.inventoryLog.menuItem.category', 'user']));
+    }
+
+    public function customerCancel(Request $request, Order $order)
+    {
+        $user = $request->user();
+        if ($user->id !== $order->user_id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        if ($order->order_status !== 'pending') {
+            return response()->json(['message' => 'Only pending orders can be cancelled'], 400);
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->restoreStock();
+            $order->update(['order_status' => 'cancelled']);
+        });
+
+        // Notify staff of cancellation
+        $this->notifyStaff(
+            'Order Cancelled',
+            "Order #{$order->id} was cancelled by the customer.",
+            ['order_id' => $order->id, 'type' => 'order_cancelled']
+        );
+
+        return response()->json($order->load(['orderItems.inventoryLog.menuItem.category', 'user']));
     }
 }

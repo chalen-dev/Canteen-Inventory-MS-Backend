@@ -14,39 +14,53 @@ class OrderItemSeeder extends Seeder
     {
         $faker = Faker::create();
 
+        // Get all orders
         $orders = Order::all();
         if ($orders->isEmpty()) {
             $this->command->info('No orders found. Skipping order items.');
             return;
         }
 
-        // Get available logs (is_available = true, quantity_in_stock > 0)
-        $availableLogs = InventoryLog::with('menuItem')
-            ->where('is_available', true)
+        // Get all available inventory logs (including those that may become out of stock later)
+        // We'll filter as we go to ensure we don't exceed stock.
+        $inventoryLogs = InventoryLog::with('menuItem')
+            ->where('is_archived', false)
             ->where('quantity_in_stock', '>', 0)
+            ->orderBy('expiry_date', 'asc') // FIFO: use soonest expiry first
             ->get()
-            ->keyBy('id'); // key by id for easy updates
+            ->keyBy('id');
 
-        if ($availableLogs->isEmpty()) {
-            $this->command->warn('No available inventory logs found. Order items will not be created.');
+        if ($inventoryLogs->isEmpty()) {
+            $this->command->warn('No inventory logs with stock found. Order items will not be created.');
             return;
         }
 
-        foreach ($orders as $order) {
-            $numItems = rand(1, min(5, $availableLogs->count()));
-            if ($numItems === 0) continue;
+        $totalItemsCreated = 0;
 
-            // Get random logs from available collection
-            $selectedLogs = $availableLogs->random($numItems);
+        foreach ($orders as $order) {
+            // Determine number of items for this order (1 to 6)
+            $numItems = rand(1, 6);
+            $itemsAdded = 0;
+            $availableLogs = $inventoryLogs->filter(fn($log) => $log->quantity_in_stock > 0);
+
+            if ($availableLogs->isEmpty()) {
+                continue; // no stock left for this order
+            }
+
+            // Shuffle and take a subset
+            $selectedLogs = $availableLogs->shuffle()->take($numItems);
 
             foreach ($selectedLogs as $log) {
                 if (!$log->menuItem) continue;
 
-                $maxQuantity = min(3, $log->quantity_in_stock);
+                // Ensure we have enough stock
+                $maxQuantity = min(5, (int)$log->quantity_in_stock);
+                if ($maxQuantity <= 0) continue;
+
                 $quantity = rand(1, $maxQuantity);
                 $amount = $quantity * $log->menuItem->price;
 
-                // Create order item – this will trigger model event and decrement stock
+                // Create the order item – this triggers model event to decrement stock
                 OrderItem::create([
                     'order_id' => $order->id,
                     'inventory_id' => $log->id,
@@ -54,16 +68,21 @@ class OrderItemSeeder extends Seeder
                     'amount' => $amount,
                 ]);
 
-                // After creation, refresh the log's quantity from database
+                // Refresh the log to get updated stock from database
                 $log->refresh();
 
-                // If stock is now zero or becomes unavailable, remove it from the available collection
-                if ($log->quantity_in_stock <= 0 || !$log->is_available) {
-                    $availableLogs->forget($log->id);
+                // If stock is now zero or becomes unavailable, remove it from the collection
+                if ($log->quantity_in_stock <= 0) {
+                    $inventoryLogs->forget($log->id);
                 }
+
+                $itemsAdded++;
+                $totalItemsCreated++;
             }
+
+            // If we added items, we could recalculate total_amount on order, but model accessor handles it
         }
 
-        $this->command->info('Order items seeded successfully.');
+        $this->command->info("$totalItemsCreated order items seeded successfully.");
     }
 }

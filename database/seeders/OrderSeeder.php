@@ -1,13 +1,12 @@
 <?php
-// database/seeders/OrderSeeder.php
 
 namespace Database\Seeders;
 
-use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
-use Illuminate\Database\Seeder;
+use App\Enums\OrderStatus;
 use Faker\Factory as Faker;
+use Illuminate\Database\Seeder;
 
 class OrderSeeder extends Seeder
 {
@@ -15,29 +14,40 @@ class OrderSeeder extends Seeder
     {
         $faker = Faker::create();
 
-        $customers = User::where('role', 'customer')->get();
+        // Get all regular customers (exclude POS user)
+        $customers = User::where('role', 'customer')
+            ->where('is_POS', false)
+            ->get();
 
         if ($customers->isEmpty()) {
             $this->command->info('No customer users found. Skipping orders.');
             return;
         }
 
-        foreach ($customers as $customer) {
-            $numOrders = rand(2, 5);
+        $statuses = [
+            OrderStatus::PENDING->value,
+            OrderStatus::PREPARING->value,
+            OrderStatus::READY->value,
+            OrderStatus::COMPLETED->value,
+            OrderStatus::CANCELLED->value,
+        ];
 
-            for ($i = 0; $i < $numOrders; $i++) {
-                $status = $faker->randomElement(OrderStatus::cases())->value;
+        $ordersToCreate = 250; // we want at least 200
 
-                Order::create([
-                    'user_id' => $customer->id,
-                    'order_status' => $status,
-                    'description' => $faker->optional(0.7)->sentence(),
-                    'created_at' => $faker->dateTimeBetween('-3 months', 'now'),
-                    'updated_at' => now(),
-                ]);
-            }
+        for ($i = 0; $i < $ordersToCreate; $i++) {
+            $customer = $faker->randomElement($customers);
+            $status = $faker->randomElement($statuses);
+            $createdAt = $faker->dateTimeBetween('-3 months', 'now');
+
+            Order::create([
+                'user_id' => $customer->id,
+                'order_status' => $status,
+                'description' => $faker->optional(0.6)->sentence(),
+                'created_at' => $createdAt,
+                'updated_at' => $faker->dateTimeBetween($createdAt, 'now'),
+            ]);
         }
 
-        $this->command->info('Orders seeded successfully.');
+        $this->command->info("$ordersToCreate orders seeded successfully.");
     }
 }

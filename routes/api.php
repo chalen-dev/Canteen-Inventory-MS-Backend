@@ -3,8 +3,10 @@
 use App\Enums\UserRole;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryLogController;
 use App\Http\Controllers\MenuItemController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\UserController;
@@ -75,13 +77,20 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         Route::post('/users', [UserController::class, 'store']);
         Route::match(['put', 'patch'], '/users/{user}', [UserController::class, 'update']);
         Route::delete('/users/{user}', [UserController::class, 'destroy']);
+
+        //Dashboard
+        Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
+        Route::get('/dashboard/sales-by-period', [DashboardController::class, 'salesByPeriod']);
+        Route::get('/dashboard/best-selling-items', [DashboardController::class, 'bestSellingItems']);
+        Route::get('/dashboard/sales-by-category', [DashboardController::class, 'salesByCategory']);
+        Route::get('/dashboard/order-volume', [DashboardController::class, 'orderVolume']);
     });
 
 
 
     //Cashier Only Routes
     Route::middleware('role:' . $cashier)->group(function () {
-
+        Route::patch('/orders/{order}/cancel', [OrderController::class, 'cancel']);
     });
 
     //Cashier and Customer Routes
@@ -91,7 +100,7 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
 
     //Customer Only Routes
     Route::middleware('role:' . $customer)->group(function () {
-
+        Route::patch('/orders/{order}/cancel', [OrderController::class, 'customerCancel']);
     });
 
     //Menu Item
@@ -111,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
     Route::post('/orders', [OrderController::class, 'store']);
     Route::match(['put', 'patch'], '/orders/{order}', [OrderController::class, 'update']);
 
+
     //Inventory Log
     Route::get('/inventory-logs', [InventoryLogController::class, 'index']);
     Route::get('/inventory-logs/{inventory_log}', [InventoryLogController::class, 'show']);
@@ -123,4 +133,8 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
     Route::match(['put', 'patch'], '/order-items/{order_item}', [OrderItemController::class, 'update']);
     Route::delete('/order-items/{order_item}', [OrderItemController::class, 'destroy']);
 
+    //Notification
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
 });

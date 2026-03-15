@@ -15,7 +15,7 @@ class InventoryLogSeeder extends Seeder
      */
     public function run(): void
     {
-        $menuItems = MenuItem::all();
+        $menuItems = MenuItem::with('category')->get();
 
         if ($menuItems->isEmpty()) {
             $this->command->info('No menu items found. Skipping inventory logs.');
@@ -24,22 +24,23 @@ class InventoryLogSeeder extends Seeder
 
         $faker = Factory::create();
 
-        // Desired total number of logs with specific statuses (adjust as needed)
-        $lowStockCount = 10;
-        $outOfStockCount = 10;
-        $expiredCount = 10;
-        $inStockCount = 30; // remaining will be in stock
+        // Desired total number of logs
+        $targetTotal = 300; // enough for 200+ orders
 
-        // We'll generate logs for each menu item, up to a maximum per item
+        // Track counts per status (we'll distribute roughly)
+        $lowStockCount = 40;
+        $outOfStockCount = 30;
+        $expiredCount = 30;
+        $inStockCount = $targetTotal - ($lowStockCount + $outOfStockCount + $expiredCount);
+
         $logsCreated = 0;
-        $targetTotal = $lowStockCount + $outOfStockCount + $expiredCount + $inStockCount;
 
         while ($logsCreated < $targetTotal) {
             foreach ($menuItems->shuffle() as $item) {
                 if ($logsCreated >= $targetTotal) break;
 
-                // Determine how many logs for this item (1-3)
-                $logsForItem = rand(1, 3);
+                // Determine how many logs for this item (1-5)
+                $logsForItem = rand(2, 5);
                 for ($i = 0; $i < $logsForItem; $i++) {
                     if ($logsCreated >= $targetTotal) break;
 
@@ -58,7 +59,7 @@ class InventoryLogSeeder extends Seeder
                             $available = false;
                             $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
                             break;
-                        case InventoryStatus::EXPIRED: // if you have EXPIRED status, otherwise use OUT_OF_STOCK
+                        case InventoryStatus::EXPIRED:
                             $quantity = round($faker->randomFloat(2, 1, 50), 2);
                             $available = false;
                             $expiryDate = $faker->dateTimeBetween('-180 days', '-1 day')->format('Y-m-d');
@@ -66,11 +67,16 @@ class InventoryLogSeeder extends Seeder
                         default: // IN_STOCK
                             $quantity = round($faker->randomFloat(2, 10, 100), 2);
                             $available = true;
-                            $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
+                            // For meals, expiry = date_acquired (same day); otherwise future date
+                            if ($item->category && str_contains(strtolower($item->category->name), 'meal')) {
+                                $expiryDate = $faker->dateTimeBetween('-30 days', 'now')->format('Y-m-d');
+                            } else {
+                                $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
+                            }
                             break;
                     }
 
-                    $dateAcquired = $faker->dateTimeBetween('-30 days', 'now')->format('Y-m-d');
+                    $dateAcquired = $faker->dateTimeBetween('-180 days', 'now')->format('Y-m-d');
 
                     InventoryLog::create([
                         'item_id' => $item->id,
