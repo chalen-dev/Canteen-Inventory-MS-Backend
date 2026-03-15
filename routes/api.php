@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         Route::post('/orders/for-customer', [OrderController::class, 'storeForCustomerByStaff']);
         Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
         Route::post('/orders/bulk-delete', [OrderController::class, 'bulkDelete']);
+        Route::put('/orders/{order}/with-items', [OrderController::class, 'updateWithItems']);
     });
 
     //Admin Only Routes

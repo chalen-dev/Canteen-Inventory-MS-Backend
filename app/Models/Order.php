@@ -23,6 +23,12 @@ class Order extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function restoreStock()
+    {
+        foreach ($this->orderItems as $item) {
+            $item->inventoryLog()->increment('quantity_in_stock', $item->quantity);
+        }
+    }
     public function getTotalAmountAttribute()
     {
         return $this->orderItems->sum('amount');

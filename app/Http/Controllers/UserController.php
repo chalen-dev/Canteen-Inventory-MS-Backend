@@ -81,7 +81,6 @@ class UserController extends Controller
     public function customers()
     {
         $customers = User::where('role', 'customer')
-            ->where('isPOS', false) // exclude POS users
             ->get();
         return response()->json($customers);
     }

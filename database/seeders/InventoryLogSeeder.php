@@ -24,63 +24,97 @@ class InventoryLogSeeder extends Seeder
 
         $faker = Factory::create();
 
-        // Define target counts for special statuses
-        $lowStockCount = 5;
-        $outOfStockCount = 5;
-        $expiredCount = 5;
+        // Desired total number of logs with specific statuses (adjust as needed)
+        $lowStockCount = 10;
+        $outOfStockCount = 10;
+        $expiredCount = 10;
+        $inStockCount = 30; // remaining will be in stock
 
-        // Shuffle items to randomly assign statuses
-        $items = $menuItems->shuffle();
+        // We'll generate logs for each menu item, up to a maximum per item
+        $logsCreated = 0;
+        $targetTotal = $lowStockCount + $outOfStockCount + $expiredCount + $inStockCount;
 
-        $assignedLow = 0;
-        $assignedOut = 0;
-        $assignedExpired = 0;
+        while ($logsCreated < $targetTotal) {
+            foreach ($menuItems->shuffle() as $item) {
+                if ($logsCreated >= $targetTotal) break;
 
-        foreach ($items as $item) {
-            // Determine which status to assign
-            if ($assignedLow < $lowStockCount) {
-                // Low stock
-                $quantity = round($faker->randomFloat(2, 0.01, 9.99), 2);
-                $status = InventoryStatus::LOW_STOCK;
-                $available = true;
-                $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
-                $assignedLow++;
-            } elseif ($assignedOut < $outOfStockCount) {
-                // Out of stock
-                $quantity = 0;
-                $status = InventoryStatus::OUT_OF_STOCK;
-                $available = false;
-                $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
-                $assignedOut++;
-            } elseif ($assignedExpired < $expiredCount) {
-                // Expired (past expiry, unavailable, status OUT_OF_STOCK)
-                $quantity = round($faker->randomFloat(2, 1, 50), 2); // still some quantity but expired
-                $status = InventoryStatus::OUT_OF_STOCK;
-                $available = false;
-                $expiryDate = $faker->dateTimeBetween('-180 days', '-1 day')->format('Y-m-d');
-                $assignedExpired++;
-            } else {
-                // In stock (remaining items)
-                $quantity = round($faker->randomFloat(2, 10, 100), 2);
-                $status = InventoryStatus::IN_STOCK;
-                $available = true;
-                $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
+                // Determine how many logs for this item (1-3)
+                $logsForItem = rand(1, 3);
+                for ($i = 0; $i < $logsForItem; $i++) {
+                    if ($logsCreated >= $targetTotal) break;
+
+                    // Decide status based on remaining quotas
+                    $status = $this->pickStatus($faker, $lowStockCount, $outOfStockCount, $expiredCount, $inStockCount);
+
+                    // Generate values based on status
+                    switch ($status) {
+                        case InventoryStatus::LOW_STOCK:
+                            $quantity = round($faker->randomFloat(2, 0.01, 9.99), 2);
+                            $available = true;
+                            $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
+                            break;
+                        case InventoryStatus::OUT_OF_STOCK:
+                            $quantity = 0;
+                            $available = false;
+                            $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
+                            break;
+                        case InventoryStatus::EXPIRED: // if you have EXPIRED status, otherwise use OUT_OF_STOCK
+                            $quantity = round($faker->randomFloat(2, 1, 50), 2);
+                            $available = false;
+                            $expiryDate = $faker->dateTimeBetween('-180 days', '-1 day')->format('Y-m-d');
+                            break;
+                        default: // IN_STOCK
+                            $quantity = round($faker->randomFloat(2, 10, 100), 2);
+                            $available = true;
+                            $expiryDate = $faker->dateTimeBetween('now', '+180 days')->format('Y-m-d');
+                            break;
+                    }
+
+                    $dateAcquired = $faker->dateTimeBetween('-30 days', 'now')->format('Y-m-d');
+
+                    InventoryLog::create([
+                        'item_id' => $item->id,
+                        'quantity_in_stock' => $quantity,
+                        'date_acquired' => $dateAcquired,
+                        'expiry_date' => $expiryDate,
+                        'inventory_status' => $status,
+                        'is_available' => $available,
+                        'description' => $faker->optional(0.3)->sentence(),
+                    ]);
+
+                    $logsCreated++;
+                }
             }
-
-            // Generate date acquired (sometime in last 30 days)
-            $dateAcquired = $faker->dateTimeBetween('-30 days', 'now')->format('Y-m-d');
-
-            InventoryLog::create([
-                'item_id' => $item->id,
-                'quantity_in_stock' => $quantity,
-                'date_acquired' => $dateAcquired,
-                'expiry_date' => $expiryDate,
-                'inventory_status' => $status,
-                'is_available' => $available,
-                'description' => $faker->optional(0.3)->sentence(),
-            ]);
         }
 
-        $this->command->info('Inventory logs seeded successfully.');
+        $this->command->info("$logsCreated inventory logs seeded successfully.");
+    }
+
+    /**
+     * Pick a status based on remaining quotas.
+     */
+    private function pickStatus($faker, &$low, &$out, &$expired, &$inStock): InventoryStatus
+    {
+        $options = [];
+        if ($low > 0) $options[] = InventoryStatus::LOW_STOCK;
+        if ($out > 0) $options[] = InventoryStatus::OUT_OF_STOCK;
+        if ($expired > 0) $options[] = InventoryStatus::EXPIRED;
+        if ($inStock > 0) $options[] = InventoryStatus::IN_STOCK;
+
+        if (empty($options)) {
+            return InventoryStatus::IN_STOCK;
+        }
+
+        $selected = $faker->randomElement($options);
+
+        // Decrement the corresponding counter
+        switch ($selected) {
+            case InventoryStatus::LOW_STOCK:    $low--; break;
+            case InventoryStatus::OUT_OF_STOCK: $out--; break;
+            case InventoryStatus::EXPIRED:      $expired--; break;
+            default:                             $inStock--; break;
+        }
+
+        return $selected;
     }
 }

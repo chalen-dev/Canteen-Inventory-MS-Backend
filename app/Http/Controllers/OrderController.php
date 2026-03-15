@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InventoryLog;
 use App\Models\Order;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -110,10 +111,108 @@ class OrderController extends Controller
             'description'  => 'nullable|string',
         ]);
 
-        $order->update($validated);
-        $order->load('orderItems');
+        DB::transaction(function () use ($request, $order, $validated) {
+            // If status is changing to cancelled, restore stock first
+            if (isset($validated['order_status']) &&
+                $validated['order_status'] === 'cancelled' &&
+                $order->order_status !== 'cancelled') {
+                $order->restoreStock();
+            }
+
+            $order->update($validated);
+            $order->load('orderItems');
+        });
 
         return response()->json($order);
+    }
+
+    public function updateWithItems(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'order_status' => 'sometimes|required|string|in:pending,preparing,ready,completed,cancelled',
+            'description'  => 'nullable|string',
+            'items'        => 'array',
+            'items.*.inventory_id' => 'required|exists:inventory_logs,id',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        DB::transaction(function () use ($request, $order, $validated) {
+            // Update order fields
+            if (isset($validated['order_status'])) {
+                $order->order_status = $validated['order_status'];
+            }
+            if (array_key_exists('description', $validated)) {
+                $order->description = $validated['description'];
+            }
+            $order->save();
+
+            // Get existing order items
+            $existingItems = $order->orderItems()->get()->keyBy('inventory_id');
+
+            // Process incoming items
+            $incoming = collect($validated['items'] ?? [])->keyBy('inventory_id');
+
+            // Items to delete (in existing but not in incoming)
+            $toDelete = $existingItems->diffKeys($incoming);
+            foreach ($toDelete as $item) {
+                // Restore stock manually before deleting
+                $item->inventoryLog()->increment('quantity_in_stock', $item->quantity);
+                $item->delete();
+            }
+
+            // Items to update or create
+            foreach ($incoming as $inventoryId => $data) {
+                $item = $existingItems->get($inventoryId);
+                $log = InventoryLog::lockForUpdate()->find($inventoryId);
+                $quantity = $data['quantity'];
+                $amount = $quantity * $log->menuItem->price; // or keep as passed? we compute
+
+                if ($item) {
+                    // Update quantity if changed
+                    if ($item->quantity != $quantity) {
+                        // Adjust stock: difference between new and old
+                        $diff = $quantity - $item->quantity;
+                        if ($diff > 0) {
+                            // Need more stock
+                            if ($log->quantity_in_stock < $diff) {
+                                throw new \Exception('Insufficient stock');
+                            }
+                            $log->decrement('quantity_in_stock', $diff);
+                        } elseif ($diff < 0) {
+                            // Return stock
+                            $log->increment('quantity_in_stock', -$diff);
+                        }
+                        $item->quantity = $quantity;
+                        $item->amount = $amount;
+                        $item->save();
+                    }
+                } else {
+                    // New item
+                    if ($log->quantity_in_stock < $quantity) {
+                        throw new \Exception('Insufficient stock');
+                    }
+                    $log->decrement('quantity_in_stock', $quantity);
+                    $order->orderItems()->create([
+                        'inventory_id' => $inventoryId,
+                        'quantity' => $quantity,
+                        'amount' => $amount,
+                    ]);
+                }
+            }
+        });
+
+        $order->load('orderItems.inventoryLog.menuItem.category', 'user');
+        return response()->json($order);
+    }
+
+    public function destroy(Order $order)
+    {
+        DB::transaction(function () use ($order) {
+            // Restore stock before deleting the order
+            $order->restoreStock();
+            $order->delete();
+        });
+        return response()->json(null, 204);
     }
 
     /**
@@ -123,7 +222,6 @@ class OrderController extends Controller
     {
         $user = $request->user();
 
-        // Customers cannot update status
         if ($user->role === 'customer') {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -132,20 +230,18 @@ class OrderController extends Controller
             'order_status' => 'required|string|in:pending,preparing,ready,completed,cancelled',
         ]);
 
+        // If changing to cancelled and order wasn't cancelled before, restore stock
+        if ($validated['order_status'] === 'cancelled' && $order->order_status !== 'cancelled') {
+            $order->restoreStock();
+        }
+        // Optional: if changing from cancelled to another status, you might want to re‑deduct stock,
+        // but that would require checking current inventory levels and is more complex.
+        // For simplicity, you may disallow changing from cancelled.
+
         $order->update(['order_status' => $validated['order_status']]);
 
         return response()->json($order->load(['orderItems.inventoryLog.menuItem.category', 'user']));
     }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Order $order)
-    {
-        $order->delete();
-        return response()->json(null, 204);
-    }
-
     /**
      * Delete multiple orders.
      */

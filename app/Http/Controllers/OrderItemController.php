@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\InventoryLog;
 use App\Models\OrderItem;
+use Exception;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
@@ -40,7 +41,11 @@ class OrderItemController extends Controller
             'amount'       => 'required|numeric|min:0',
         ]);
 
-        $orderItem = OrderItem::create($validated);
+        try {
+            $orderItem = OrderItem::create($validated);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
 
         // Load relationships
         $orderItem->load(['order', 'inventoryLog.menuItem']);
@@ -89,18 +94,9 @@ class OrderItemController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(InventoryLog $inventoryLog)
+    public function destroy(OrderItem $orderItem) // NOT InventoryLog
     {
-        try {
-            $inventoryLog->delete();
-            return response()->json(null, 204);
-        } catch (QueryException $e) {
-            if ($e->errorInfo[1] == 1451) {
-                return response()->json([
-                    'message' => 'Cannot delete this inventory log because it is referenced in order items.'
-                ], 409);
-            }
-            throw $e;
-        }
+        $orderItem->delete();
+        return response()->json(null, 204);
     }
 }
