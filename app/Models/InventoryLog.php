@@ -26,4 +26,13 @@ class InventoryLog extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    protected static function booted()
+    {
+        static::saving(function ($inventoryLog) {
+            if ($inventoryLog->expiry_date && $inventoryLog->expiry_date < now()->toDateString()) {
+                $inventoryLog->is_available = false;
+            }
+        });
+    }
 }

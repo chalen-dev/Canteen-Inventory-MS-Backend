@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('password');
             $table->enum('role', UserRole::cases())->default(UserRole::CUSTOMER->value);
             $table->boolean('is_POS')->default(false);
+            $table->boolean('is_blacklisted')->default(false);
             $table->rememberToken();
             $table->timestamps();
         });

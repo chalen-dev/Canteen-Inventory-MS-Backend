@@ -98,4 +98,12 @@ class UserController extends Controller
 
         return response()->json($user);
     }
+
+    public function updateBlacklist(Request $request, User $user)
+    {
+        $request->validate(['is_blacklisted' => 'required|boolean']);
+        $user->is_blacklisted = $request->is_blacklisted;
+        $user->save();
+        return response()->json($user);
+    }
 }

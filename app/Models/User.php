@@ -27,6 +27,12 @@ class User extends Authenticatable
         'is_POS',
     ];
 
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'is_blacklisted' => 'boolean',
+    ];
+
     /**
      * The attributes that should be hidden for serialization.
      *

@@ -46,6 +46,11 @@ class AuthController extends Controller
             ]);
         }
 
+        // Check if user is blacklisted
+        if ($user->is_blacklisted) {
+            return response()->json(['message' => 'Your account has been blacklisted. Please contact support.'], 403);
+        }
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([

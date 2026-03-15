@@ -84,6 +84,9 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         Route::get('/dashboard/best-selling-items', [DashboardController::class, 'bestSellingItems']);
         Route::get('/dashboard/sales-by-category', [DashboardController::class, 'salesByCategory']);
         Route::get('/dashboard/order-volume', [DashboardController::class, 'orderVolume']);
+
+        //User Management
+        Route::patch('/users/{user}/blacklist', [UserController::class, 'updateBlacklist']);
     });
 
 

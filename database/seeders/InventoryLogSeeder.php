@@ -78,7 +78,7 @@ class InventoryLogSeeder extends Seeder
 
                     $dateAcquired = $faker->dateTimeBetween('-180 days', 'now')->format('Y-m-d');
 
-                    InventoryLog::create([
+                    $attributes = [
                         'item_id' => $item->id,
                         'quantity_in_stock' => $quantity,
                         'date_acquired' => $dateAcquired,
@@ -86,7 +86,14 @@ class InventoryLogSeeder extends Seeder
                         'inventory_status' => $status,
                         'is_available' => $available,
                         'description' => $faker->optional(0.3)->sentence(),
-                    ]);
+                    ];
+
+                    // If expiry_date is in the past, force is_available to false
+                    if ($expiryDate && $expiryDate <= now()->toDateString()) {
+                        $attributes['is_available'] = false;
+                    }
+
+                    InventoryLog::create($attributes);
 
                     $logsCreated++;
                 }
