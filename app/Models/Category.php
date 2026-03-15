@@ -8,7 +8,8 @@ class Category extends Model
 {
     protected $fillable = [
         'name',
-        'description'
+        'description',
+        'photo_path'
     ];
 
     public function menuItems()
