@@ -216,5 +216,26 @@ class InventoryLogController extends Controller
         }
     }
 
+    public function availableForPos()
+    {
+        // Get all logs that are not archived, have stock > 0, and are not expired
+        $logs = InventoryLog::with('menuItem.category')
+            ->where('is_archived', false)
+            ->where('quantity_in_stock', '>', 0)
+            ->where(function ($query) {
+                $query->whereNull('expiry_date')
+                    ->orWhere('expiry_date', '>=', now());
+            })
+            ->get()
+            ->groupBy('item_id');
+
+        // For each menu item, pick the one with the earliest expiry date (FIFO)
+        $bestLogs = $logs->map(function ($group) {
+            return $group->sortBy('expiry_date')->first();
+        })->values();
+
+        return response()->json($bestLogs);
+    }
+
 
 }

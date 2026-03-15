@@ -36,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         Route::post('/inventory-logs/bulk-archive', [InventoryLogController::class, 'bulkArchive']);
         Route::post('/inventory-logs/bulk-unarchive', [InventoryLogController::class, 'bulkUnarchive']);
         Route::post('/inventory-logs/bulk-toggle-availability', [InventoryLogController::class, 'bulkToggleAvailability']);
+        Route::get('/inventory-logs/available-pos', [InventoryLogController::class, 'availableForPos']);
 
         // Customer list (for order assignment)
         Route::get('/users/customers', [UserController::class, 'customers']);
@@ -46,6 +47,9 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
         Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
         Route::post('/orders/bulk-delete', [OrderController::class, 'bulkDelete']);
         Route::put('/orders/{order}/with-items', [OrderController::class, 'updateWithItems']);
+
+        //User
+        Route::get('/users/pos', [UserController::class, 'posUser']);
     });
 
     //Admin Only Routes

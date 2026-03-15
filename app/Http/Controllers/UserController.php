@@ -84,4 +84,17 @@ class UserController extends Controller
             ->get();
         return response()->json($customers);
     }
+
+    public function posUser()
+    {
+        $user = User::where('role', 'customer')
+            ->where('is_POS', true)
+            ->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'POS user not found'], 404);
+        }
+
+        return response()->json($user);
+    }
 }
