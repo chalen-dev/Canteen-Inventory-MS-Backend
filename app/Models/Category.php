@@ -12,8 +12,17 @@ class Category extends Model
         'photo_path'
     ];
 
+    protected $appends = ['image_url'];
+
+
+
     public function menuItems()
     {
         return $this->hasMany(MenuItem::class);
+    }
+
+    public function getImageUrlAttribute()
+    {
+        return $this->photo_path ? asset('storage/' . $this->photo_path) : null;
     }
 }

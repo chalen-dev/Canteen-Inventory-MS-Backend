@@ -31,6 +31,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'photo_path' => 'nullable|string',
         ]);
 
         $category = Category::create($validated);

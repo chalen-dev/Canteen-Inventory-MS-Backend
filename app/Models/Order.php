@@ -13,6 +13,8 @@ class Order extends Model
         'description',
     ];
 
+    protected $appends = ['total_amount'];
+
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);

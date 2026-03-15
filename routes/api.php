@@ -95,8 +95,11 @@ Route::middleware('auth:sanctum')->group(function () use ($admin, $cashier, $cus
     });
 
     //Menu Item
+    Route::get('/menu-items/stock-status', [MenuItemController::class, 'stockStatus']);
     Route::get('/menu-items', [MenuItemController::class, 'index']);
     Route::get('/menu-items/{menu_item}', [MenuItemController::class, 'show']);
+    Route::get('/menu-items/{menu_item}/best-inventory', [MenuItemController::class, 'bestInventory']);
+
 
     //Category
     Route::get('/categories', [CategoryController::class, 'index']);

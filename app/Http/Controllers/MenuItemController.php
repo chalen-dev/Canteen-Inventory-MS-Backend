@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InventoryLog;
 use App\Models\MenuItem;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -190,5 +191,46 @@ class MenuItemController extends Controller
             }
             throw $e;
         }
+    }
+
+    public function bestInventory(MenuItem $menuItem)
+    {
+        $bestLog = InventoryLog::where('item_id', $menuItem->id)
+            ->where('is_archived', false)
+            ->where('quantity_in_stock', '>', 0)
+            ->where(function ($query) {
+                $query->whereNull('expiry_date')
+                    ->orWhere('expiry_date', '>=', now());
+            })
+            ->orderBy('expiry_date', 'asc') // FIFO: earliest expiry first
+            ->first();
+
+        if (!$bestLog) {
+            return response()->json(['message' => 'No available inventory for this item'], 404);
+        }
+
+        return response()->json($bestLog);
+    }
+
+    public function stockStatus(Request $request)
+    {
+        $ids = $request->query('ids');
+        if (!$ids) {
+            return response()->json([], 400);
+        }
+        $ids = explode(',', $ids);
+        $results = [];
+        foreach ($ids as $id) {
+            $exists = InventoryLog::where('item_id', $id)
+                ->where('is_archived', false)
+                ->where('quantity_in_stock', '>', 0)
+                ->where(function ($query) {
+                    $query->whereNull('expiry_date')
+                        ->orWhere('expiry_date', '>=', now());
+                })
+                ->exists();
+            $results[] = ['id' => (int)$id, 'inStock' => $exists];
+        }
+        return response()->json($results);
     }
 }
